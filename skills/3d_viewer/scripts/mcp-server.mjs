@@ -87,19 +87,24 @@ const TOOLS = [
     command: 'getMaterialPresets',
   },
   {
-    name: 'set_part_material_by_preset', description: 'Apply a built-in material preset to a part. Use get_material_presets first to see available preset names.',
-    inputSchema: { type: 'object', properties: { preset: { type: 'string', description: 'Preset name (camelCase, e.g. "chrome", "clearGlass")' }, partName: { type: 'string', description: 'Target part name. Omit to use selected part or first part.' } }, required: ['preset'] },
+    name: 'set_part_material_by_preset', description: 'Apply a built-in material preset to a part or batch-apply to matching parts. Use get_material_presets first to see available preset names.',
+    inputSchema: { type: 'object', properties: { preset: { type: 'string', description: 'Preset name (camelCase, e.g. "chrome", "clearGlass")' }, partName: { type: 'string', description: 'Target part name (single part). Mutually exclusive with query.' }, query: { type: 'object', description: 'PartQuery filter for batch matching. Mutually exclusive with partName. Fields: name (regex string), color (object with rgb/name/tolerance), metalness/roughness (object with value/op), materialIndex (number or number[]), triangleCount (object with min/max), extruder (number), plateId (number).' } }, required: ['preset'] },
     command: 'setPartMaterialByPreset',
   },
   {
-    name: 'set_part_material', description: 'Apply a custom material to a part. Prefer set_part_material_by_preset when a matching preset exists.',
-    inputSchema: { type: 'object', properties: { appearance: { type: 'object', description: 'MaterialAppearance object' }, partName: { type: 'string', description: 'Target part name. Omit to use selected part or first part.' } }, required: ['appearance'] },
+    name: 'set_part_material', description: 'Apply a custom material to a part or batch-apply to matching parts. Prefer set_part_material_by_preset when a matching preset exists.',
+    inputSchema: { type: 'object', properties: { appearance: { type: 'object', description: 'MaterialAppearance object' }, partName: { type: 'string', description: 'Target part name (single part). Mutually exclusive with query.' }, query: { type: 'object', description: 'PartQuery filter for batch matching. Mutually exclusive with partName.' } }, required: ['appearance'] },
     command: 'setPartMaterial',
   },
   {
     name: 'get_part_material', description: 'Get current material state of a part (override, original, and preset name if any)',
     inputSchema: { type: 'object', properties: { partName: { type: 'string', description: 'Target part name. Omit to use selected part or first part.' } } },
     command: 'getPartMaterial',
+  },
+  {
+    name: 'query_parts', description: 'Query parts by attribute filters. Returns matching parts without modifying material.',
+    inputSchema: { type: 'object', properties: { query: { type: 'object', description: 'PartQuery filter. Fields: name (regex string), color (object with rgb/name/tolerance), metalness/roughness (object with value/op), materialIndex (number or number[]), triangleCount (object with min/max), extruder (number), plateId (number).' } }, required: ['query'] },
+    command: 'queryParts',
   },
   {
     name: 'play_animation', description: 'Play current animation',

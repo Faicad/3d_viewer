@@ -40,6 +40,7 @@ http://localhost:4273/#/workspace?url=<path>&theme=dark&lang=en&env=studio
 | `theme` | string | `light` / `dark` / `system` | `system` | UI theme |
 | `lang` | string | `zh` / `en` / `es` / `ja` / `ko` / `fr` / `de` / `pt` / `ru` / `ar` / `hi` / `id` / `tr` / `it` / `nl` / `pl` / `vi` / `th` / `uk` / `sv` | browser language | UI language |
 | `env` | string | `studio` / any HDR URL | `studio` | Environment map. Supports CORS-compatible CDN links like Poly Haven |
+| `AutoRotate` | string | `0` / `false` or `1` / `true` | `1` | Disable auto-rotation on page load (`AutoRotate=0` or `AutoRotate=false`) |
 
 ---
 
@@ -134,7 +135,7 @@ Async commands (`loadModel`, `exportModel`) return `{ loading: true }` immediate
 
 | Command | Parameters | Description |
 |---------|-----------|-------------|
-| `loadModel` | `{ url: string }` or `{ data: string }` | Load a model from URL or base64 data URL. STEP is auto-converted to GLB |
+| `loadModel` | `{ url: string }` or `{ data: string }`, `AutoRotate?: boolean` | Load a model from URL or base64 data URL. STEP is auto-converted to GLB. `AutoRotate` sets persistent flag (omitted = keep current, `false` = disable, `true` = enable auto-rotation after load) |
 | `getModelInfo` | — | Get current model info (fileName, format, partCount, parts, animations) |
 | `resetViewer` | — | Clear scene, clear selection, reset animation state |
 | `exportModel` | `{ format: 'glb' \| 'stl' }` | Export all visible models in the scene as GLB or STL, returns base64-encoded binary data |
@@ -168,9 +169,10 @@ Async commands (`loadModel`, `exportModel`) return `{ loading: true }` immediate
 | Command | Parameters | Description |
 |---------|-----------|-------------|
 | `getMaterialPresets` | — | Get all built-in material presets (name → full MaterialAppearance dict) |
-| `setPartMaterialByPreset` | `{ preset: string, partName?: string }` | Apply a built-in preset to a specific part |
-| `setPartMaterial` | `{ appearance: MaterialAppearance, partName?: string }` | Apply a custom material to a specific part |
+| `setPartMaterialByPreset` | `{ preset: string, partName?: string }` or `{ preset: string, query: PartQuery }` | Apply a built-in preset to a specific part, or batch-apply by query |
+| `setPartMaterial` | `{ appearance: MaterialAppearance, partName?: string }` or `{ appearance: MaterialAppearance, query: PartQuery }` | Apply a custom material to a specific part, or batch-apply by query |
 | `getPartMaterial` | `{ partName?: string }` | Get the current material state of a specific part |
+| `queryParts` | `{ query: PartQuery }` | Query parts by attribute, returns matched parts without modifying material |
 
 ##### Part Material Targeting Rules
 
@@ -232,6 +234,90 @@ Async commands (`loadModel`, `exportModel`) return `{ loading: true }` immediate
 
 > **Recommendation**: Prefer `setPartMaterialByPreset`. AI should first call `getMaterialPresets` to learn the available presets (29 presets covering metal/plastic/glass/rubber/paint, etc.), then apply by name.
 
+##### Batch Query (query parameter)
+
+`setPartMaterialByPreset` and `setPartMaterial` accept a `query` parameter (mutually exclusive with `partName`) to apply material to all matching parts at once:
+
+```typescript
+// Apply "gold" preset to all parts whose name starts with "gear"
+{ command: "setPartMaterialByPreset", params: { query: { name: "^gear" }, preset: "gold" } }
+```
+
+When `query` is present, `partName` is ignored. See `queryParts` below for the full `PartQuery` syntax.
+
+##### `queryParts` — Part Query Command
+
+Query parts by attribute without modifying material:
+
+```typescript
+{ command: "queryParts", params: { query: { name: ".*screw.*" } } }
+// Response: { status: "success", data: { parts: [{ partId, partName, triangleCount, materialIndex, ... }], partCount: N } }
+```
+
+##### PartQuery Syntax
+
+```typescript
+interface PartQuery {
+  name?: string            // Part name regex, e.g. "^gear", ".*screw.*"
+  color?: ColorMatch       // Match by original material color
+  metalness?: NumberMatch  // Match by metalness
+  roughness?: NumberMatch  // Match by roughness
+  materialIndex?: number | number[]  // Match by glTF material index
+  triangleCount?: RangeMatch        // Match by triangle count range
+  extruder?: number        // Bambu Lab extruder (1-based)
+  plateId?: number         // Bambu Lab plate
+}
+
+interface NumberMatch {
+  value: number
+  op?: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'  // default 'eq'
+}
+
+interface RangeMatch {
+  min?: number
+  max?: number
+}
+
+interface ColorMatch {
+  rgb?:                                // RGB(A) 0-255
+    | [number, number, number]         // [255,0,0]
+    | [number, number, number, number] // [255,0,0,255]
+    | { r: number; g: number; b: number; a?: number }  // { r:255, g:0, b:0 }
+    | string                           // "rgb(255,0,0)" / "rgba(255,0,0,1)" / "255,0,0" / "#FF0000" / "FF0000"
+  name?: string                        // Named color: "red", "black", "blue", "grey", etc.
+  tolerance?: number                   // 0-255, default 0
+}
+```
+
+Multiple filter fields are combined with **AND** logic. `name` regex uses JavaScript `RegExp`. Invalid regex throws an error.
+
+Named colors supported: `black`, `white`, `red`, `green`, `blue`, `yellow`, `cyan`, `magenta`, `grey`/`gray`, `orange`, `brown`, `pink`, `purple`, `navy`.
+
+Examples:
+
+```typescript
+// All right-side parts
+{ query: { name: "\\.R$" } }
+
+// All Main material parts (glTF material index = 1)
+{ query: { materialIndex: 1 } }
+
+// All metal parts (metalness = 1)
+{ query: { metalness: { value: 1 } } }
+
+// All non-metal parts
+{ query: { metalness: { value: 0.5, op: "gt" } } }
+
+// Grey-colored parts (approximate match)
+{ query: { color: { name: "grey", tolerance: 10 } } }
+
+// Combined: left-side parts with Main material
+{ query: { name: "\\.L$", materialIndex: 1 } }
+
+// Batch apply chrome preset to all metal parts
+{ command: "setPartMaterialByPreset", params: { query: { metalness: { value: 0.5, op: "gt" } }, preset: "chrome" } }
+```
+
 ##### `getMaterialPresets` Return Structure
 
 ```typescript
@@ -250,7 +336,7 @@ Skeletal/morph animations embedded in GLB files (e.g., product demo animations, 
 
 > ⚠️ **Difference from GSAP Animation Demos**:
 > - **GLB Built-in Animations** (this section) — skeletal/morph animation clips embedded in the model file; play/pause/seek controlled via API commands
-> - **GSAP Demo Animations** (`executeCode` injection) — AI-generated GSAP assembly/explode/rotate effects that operate on entire parts; controlled via `node demos/<name>.mjs` injecting a UI panel
+> - **GSAP Demo Animations** (overlay iframe HTML) — AI-generated GSAP assembly/explode/rotate effects that operate on entire parts; loaded via overlay iframe in the viewer
 >
 > They are independent: GLB built-in animations are defined by the model author; GSAP demos are generated by AI in real-time.
 
@@ -273,6 +359,11 @@ Skeletal/morph animations embedded in GLB files (e.g., product demo animations, 
 | `resetCamera` | — | Reset camera to default position `(0, -6, 4)`, looking at origin |
 | `zoomToFit` | `{ padding?: number }` | Zoom to fit all visible geometry (`padding` defaults to 1.5) |
 | `setCameraMode` | `{ value: 'perspective' \| 'orthographic' }` | Switch perspective/orthographic projection |
+| `startRotate` | — | Start GSAP rotation (30s/loop, infinite) from current camera position |
+| `stopRotate` | — | Stop rotation immediately, re-enable OrbitControls |
+| `getRotate` | — | Get current rotation state: `{ enabled: boolean }` |
+
+> **`rotateStopped` event**: When the user interacts with the viewport (pointerdown / wheel / keydown), the rotation stops automatically and a `rotateStopped` CustomEvent is dispatched on `window`. Listen via `window.addEventListener('rotateStopped', ...)`. The `stopRotate` API command does NOT dispatch this event.
 
 #### Selection & Tools
 
@@ -295,21 +386,17 @@ Skeletal/morph animations embedded in GLB files (e.g., product demo animations, 
 |---------|-----------|-------------|
 | `takeScreenshot` | `{ width?: number, height?: number }` | Capture the current viewport, returns a base64 PNG data URL |
 
-#### Code Injection (AI-Generated Custom UI)
+#### AI-Generated Custom UI
 
-| Command | Parameters | Description |
-|---------|-----------|-------------|
-| `executeCode` | `{ html?: string, css?: string, js?: string, mode?: 'replace' \| 'append' \| 'clear' }` | 🧪 Experimental. Injects AI-generated UI into `#ai-layer` that can manipulate the scene |
+AI-generated HTML files can be loaded as overlay iframes in the viewer. See [AI Code Injection](./AI_CODE_INJECTION.md).
 
-> `executeCode` is the entry point for AI-generated custom UI. **Currently experimental** — the interface and behavior may change in future versions. See [AI Code Injection](./AI_CODE_INJECTION.md).
+Three built-in demo HTML files (synced to the skill root directory):
 
-Three built-in demos can be run directly via `node demos/<name>.mjs` to inject animation control panels into the local viewer:
-
-| Demo | Description |
-|------|-------------|
-| `gsap-rotate-demo.mjs` | Rotation control panel — camera orbit / object rotation, speed, easing, axis selection |
-| `gsap-assemble-demo.mjs` | Assembly animation — parts settle from bottom to top, adjustable drop height, duration, landing easing |
-| `gsap-explode-demo.mjs` | Exploded view — parts scatter radially, adjustable distance, stagger, duration, easing |
+| Demo HTML | Description |
+|-----------|-------------|
+| `gsap-rotate-demo.html` | Rotation control panel — camera orbit / object rotation, speed, easing, axis selection |
+| `gsap-assemble-demo.html` | Assembly animation — parts settle from bottom to top, adjustable drop height, duration, landing easing |
+| `gsap-explode-demo.html` | Exploded view — parts scatter radially, adjustable distance, stagger, duration, easing |
 
 ---
 

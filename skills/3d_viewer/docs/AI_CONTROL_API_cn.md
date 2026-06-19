@@ -168,9 +168,10 @@ window.postMessage({
 | 命令 | 参数 | 说明 |
 |------|------|------|
 | `getMaterialPresets` | — | 获取所有内置材质预设（名称 → 完整 MaterialAppearance 字典） |
-| `setPartMaterialByPreset` | `{ preset: string, partName?: string }` | 应用内置预设到指定零件 |
-| `setPartMaterial` | `{ appearance: MaterialAppearance, partName?: string }` | 应用自定义材质到指定零件 |
+| `setPartMaterialByPreset` | `{ preset: string, partName?: string }` 或 `{ preset: string, query: PartQuery }` | 应用内置预设到指定零件，或按查询批量设置 |
+| `setPartMaterial` | `{ appearance: MaterialAppearance, partName?: string }` 或 `{ appearance: MaterialAppearance, query: PartQuery }` | 应用自定义材质到指定零件，或按查询批量设置 |
 | `getPartMaterial` | `{ partName?: string }` | 获取指定零件的当前材质状态 |
+| `queryParts` | `{ query: PartQuery }` | 按属性查询零件，返回匹配结果，不修改材质 |
 
 ##### 零件材质定位规则
 
@@ -231,6 +232,90 @@ window.postMessage({
 ```
 
 > **建议**：优先使用 `setPartMaterialByPreset`。AI 应先调用 `getMaterialPresets` 了解可用预设（29 个，覆盖金属/塑料/玻璃/橡胶/油漆等），按名字匹配后应用。
+
+##### 批量查询（query 参数）
+
+`setPartMaterialByPreset` 和 `setPartMaterial` 支持传入 `query` 参数（与 `partName` 互斥），一次性匹配所有符合条件的零件并应用材质：
+
+```typescript
+// 给所有名字以 "gear" 开头的零件应用 gold 预设
+{ command: "setPartMaterialByPreset", params: { query: { name: "^gear" }, preset: "gold" } }
+```
+
+当 `query` 存在时忽略 `partName`。完整的 `PartQuery` 语法见下方 `queryParts`。
+
+##### `queryParts` — 零件查询命令
+
+按属性查询零件，不修改材质：
+
+```typescript
+{ command: "queryParts", params: { query: { name: ".*screw.*" } } }
+// 返回：{ status: "success", data: { parts: [{ partId, partName, triangleCount, materialIndex, ... }], partCount: N } }
+```
+
+##### PartQuery 语法
+
+```typescript
+interface PartQuery {
+  name?: string            // 零件名正则，如 "^gear"、".*screw.*"
+  color?: ColorMatch       // 按原始材质颜色匹配
+  metalness?: NumberMatch  // 按金属度匹配
+  roughness?: NumberMatch  // 按粗糙度匹配
+  materialIndex?: number | number[]  // 按 glTF 材质索引匹配
+  triangleCount?: RangeMatch        // 按三角形数量范围匹配
+  extruder?: number        // Bambu Lab 挤出器（1-based）
+  plateId?: number         // Bambu Lab 平台
+}
+
+interface NumberMatch {
+  value: number
+  op?: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'  // 默认 'eq'
+}
+
+interface RangeMatch {
+  min?: number
+  max?: number
+}
+
+interface ColorMatch {
+  rgb?:                                // RGB(A) 0-255
+    | [number, number, number]         // [255,0,0]
+    | [number, number, number, number] // [255,0,0,255]
+    | { r: number; g: number; b: number; a?: number }  // { r:255, g:0, b:0 }
+    | string                           // "rgb(255,0,0)" / "rgba(255,0,0,1)" / "255,0,0" / "#FF0000" / "FF0000"
+  name?: string                        // 颜色名："red"、"black"、"blue"、"grey" 等
+  tolerance?: number                   // 容差 0-255，默认 0
+}
+```
+
+多个条件之间为 **AND** 关系。`name` 正则使用 JavaScript `RegExp`，非法正则抛错。
+
+内置颜色名：`black`、`white`、`red`、`green`、`blue`、`yellow`、`cyan`、`magenta`、`grey`/`gray`、`orange`、`brown`、`pink`、`purple`、`navy`。
+
+示例：
+
+```typescript
+// 所有右侧零件
+{ query: { name: "\\.R$" } }
+
+// Main 材质零件（glTF 材质索引 = 1）
+{ query: { materialIndex: 1 } }
+
+// 所有金属零件（metalness = 1）
+{ query: { metalness: { value: 1 } } }
+
+// 所有非金属零件
+{ query: { metalness: { value: 0.5, op: "gt" } } }
+
+// 灰色的零件（近似匹配）
+{ query: { color: { name: "grey", tolerance: 10 } } }
+
+// 组合：左侧零件且为 Main 材质
+{ query: { name: "\\.L$", materialIndex: 1 } }
+
+// 批量应用 chrome 预设到所有金属零件
+{ command: "setPartMaterialByPreset", params: { query: { metalness: { value: 0.5, op: "gt" } }, preset: "chrome" } }
+```
 
 ##### `getMaterialPresets` 返回结构
 
@@ -307,7 +392,7 @@ GLB 文件内置的骨骼/变形动画（如产品演示动画、角色动作）
 
 | Demo | 说明 |
 |------|------|
-| `gsap-rotate-demo.mjs` | 旋转控制面板 — 相机环绕/物体自转、速度、缓动、轴选择 |
+| `gsap-rotate-demo.html` | 旋转控制面板 — 相机环绕/物体自转、速度、缓动、轴选择 |
 | `gsap-assemble-demo.mjs` | 装配动画 — 零件自下而上逐个落位，可调节落高、时长、着陆缓动 |
 | `gsap-explode-demo.mjs` | 爆炸图动画 — 零件沿径向飞散，可调距离、stagger、时长、缓动 |
 
