@@ -21,6 +21,7 @@ jobs:
         with:
           node-version: 24
       - run: node skills/3d_viewer/tests/smoke-test.mjs
+      - run: node tests/test-package.mjs
 
   e2e-test:
     name: E2E tests

@@ -62,6 +62,14 @@ try {
     $apiContent = Get-Content (Join-Path $srcDir "docs\AI_CONTROL_API.md") -Raw
     Add-Content -Path $skillPath -Value "`n$apiContent"
 
+    # Inject edition meta for intl
+    $enIndex = Join-Path $enTmpDir "index.html"
+    if (Test-Path $enIndex) {
+        $content = Get-Content $enIndex -Raw
+        $content = $content -replace '<head>', '<head>`n  <meta name="edition" content="intl">'
+        Set-Content $enIndex $content -NoNewline
+    }
+
     New-Item -ItemType Directory -Path (Join-Path $enTmpDir "models") -Force | Out-Null
     $enOutput = Join-Path $OutputDir "3d_viewer_skill_en.zip"
     Write-ZipFromDir $enTmpDir $enOutput
@@ -90,6 +98,14 @@ try {
     Copy-Item (Join-Path $srcDir "SKILL_cn.md") $cnSkillPath
     $cnApiContent = Get-Content (Join-Path $srcDir "docs\AI_CONTROL_API_cn.md") -Raw
     Add-Content -Path $cnSkillPath -Value "`n$cnApiContent"
+
+    # Inject edition meta for cn
+    $cnIndex = Join-Path $cnTmpDir "index.html"
+    if (Test-Path $cnIndex) {
+        $content = Get-Content $cnIndex -Raw
+        $content = $content -replace '<head>', '<head>`n  <meta name="edition" content="cn">'
+        Set-Content $cnIndex $content -NoNewline
+    }
 
     New-Item -ItemType Directory -Path (Join-Path $cnTmpDir "models") -Force | Out-Null
     $cnOutput = Join-Path $OutputDir "3d_viewer_skill_cn.zip"

@@ -48,6 +48,12 @@ rm -f "$EN_OUTPUT"
 done)
 
 cat "$SRC_DIR/docs/AI_CONTROL_API.md" >> "$TMPDIR/SKILL.md"
+
+# Inject edition meta for intl
+if [ -f "$TMPDIR/index.html" ]; then
+  sed -i 's|<head>|<head>\n  <meta name="edition" content="intl">|' "$TMPDIR/index.html"
+fi
+
 mkdir -p "$TMPDIR/models"
 (cd "$TMPDIR" && zip -r "$EN_OUTPUT" .)
 echo "Done: $EN_OUTPUT"
@@ -77,6 +83,12 @@ done)
 cp "$SRC_DIR/SKILL.md" "$TMPDIR/SKILL_en.md"
 cp "$SRC_DIR/SKILL_cn.md" "$TMPDIR/SKILL.md"
 cat "$SRC_DIR/docs/AI_CONTROL_API_cn.md" >> "$TMPDIR/SKILL.md"
+
+# Inject edition meta for cn
+if [ -f "$TMPDIR/index.html" ]; then
+  sed -i 's|<head>|<head>\n  <meta name="edition" content="cn">|' "$TMPDIR/index.html"
+fi
+
 mkdir -p "$TMPDIR/models"
 (cd "$TMPDIR" && zip -r "$CN_OUTPUT" .)
 echo "Done: $CN_OUTPUT"

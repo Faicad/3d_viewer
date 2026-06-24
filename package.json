@@ -5,9 +5,10 @@
   "description": "Faicad 3D Viewer — Skill deployment",
   "scripts": {
     "test": "node skills/3d_viewer/tests/smoke-test.mjs",
+    "test:package": "node tests/test-package.mjs",
     "test:e2e": "node skills/3d_viewer/scripts/kill-port.mjs && playwright test --config skills/3d_viewer/playwright.config.ts",
     "test:skill-mcp": "node skills/3d_viewer/tests/test-skill-mcp.mjs",
-    "test:all": "npm run test && npm run test:e2e && npm run test:skill-mcp",
+    "test:all": "npm run test && npm run test:package && npm run test:e2e && npm run test:skill-mcp",
     "package": "bash scripts/package-skill.sh $@ || pwsh -NoProfile -File scripts/package-skill.ps1"
   },
   "devDependencies": {
