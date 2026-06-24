@@ -143,7 +143,7 @@ console.log(info.data)
 三个 `.html` 文件（与 `index.html` 同级）可直接在浏览器中通过 overlay iframe 加载：
 
 ```
-scripts/demos/
+/
 ├── gsap-rotate-demo.html    # 旋转控制面板
 ├── gsap-assemble-demo.html  # 装配动画
 └── gsap-explode-demo.html   # 爆炸图动画

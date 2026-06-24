@@ -2,6 +2,7 @@ import http from 'http'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { handlePutModel } from './save-model.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = parseInt(process.env.PORT || '4273', 10)
@@ -62,12 +63,18 @@ function serveStatic(req, res) {
 
 const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204)
     res.end()
+    return
+  }
+
+  // PUT — save exported file (same-origin check done by frontend)
+  if (req.method === 'PUT') {
+    handlePutModel(req, res, ROOT)
     return
   }
 

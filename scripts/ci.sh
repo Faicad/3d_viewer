@@ -2,6 +2,15 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Windows guard — use ci.ps1 instead
+case "$ROOT" in
+  /mnt/*)
+    echo "ERROR: ci.sh is a Linux/macOS script. On Windows, run: pwsh -NoProfile scripts/ci.ps1" >&2
+    exit 1
+    ;;
+esac
+
 cd "$ROOT"
 
 echo "==> 1/3 skip npm ci"
