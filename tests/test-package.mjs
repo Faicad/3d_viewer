@@ -70,10 +70,10 @@ function testPackage() {
     const enIndex = readZipIndex(enZip)
     const cnIndex = readZipIndex(cnZip)
 
-    assert(enIndex.includes('name="edition" content="intl"'), 'EN index.html has edition=intl')
-    assert(!enIndex.includes('name="edition" content="cn"'), 'EN index.html does not have edition=cn')
-    assert(cnIndex.includes('name="edition" content="cn"'), 'CN index.html has edition=cn')
-    assert(!cnIndex.includes('name="edition" content="intl"'), 'CN index.html does not have edition=intl')
+    assert(enIndex.includes('name="data_region" content="us"'), 'EN index.html has data_region=us')
+    assert(!enIndex.includes('name="data_region" content="cn"'), 'EN index.html does not have data_region=cn')
+    assert(cnIndex.includes('name="data_region" content="cn"'), 'CN index.html has data_region=cn')
+    assert(!cnIndex.includes('name="data_region" content="us"'), 'CN index.html does not have data_region=us')
   } finally {
     cleanDir(tmpDir)
   }

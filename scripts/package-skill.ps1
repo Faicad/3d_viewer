@@ -62,11 +62,11 @@ try {
     $apiContent = Get-Content (Join-Path $srcDir "docs\AI_CONTROL_API.md") -Raw
     Add-Content -Path $skillPath -Value "`n$apiContent"
 
-    # Inject edition meta for intl
+    # Inject data_region meta for US
     $enIndex = Join-Path $enTmpDir "index.html"
     if (Test-Path $enIndex) {
         $content = Get-Content $enIndex -Raw
-        $content = $content -replace '<head>', '<head>`n  <meta name="edition" content="intl">'
+        $content = $content -replace '<head>', "<head>`n  <meta name=""data_region"" content=""us"">"
         Set-Content $enIndex $content -NoNewline
     }
 
@@ -99,11 +99,11 @@ try {
     $cnApiContent = Get-Content (Join-Path $srcDir "docs\AI_CONTROL_API_cn.md") -Raw
     Add-Content -Path $cnSkillPath -Value "`n$cnApiContent"
 
-    # Inject edition meta for cn
+    # Inject data_region meta for CN
     $cnIndex = Join-Path $cnTmpDir "index.html"
     if (Test-Path $cnIndex) {
         $content = Get-Content $cnIndex -Raw
-        $content = $content -replace '<head>', '<head>`n  <meta name="edition" content="cn">'
+        $content = $content -replace '<head>', "<head>`n  <meta name=""data_region"" content=""cn"">"
         Set-Content $cnIndex $content -NoNewline
     }
 

@@ -49,9 +49,9 @@ done)
 
 cat "$SRC_DIR/docs/AI_CONTROL_API.md" >> "$TMPDIR/SKILL.md"
 
-# Inject edition meta for intl
+# Inject data_region meta for US
 if [ -f "$TMPDIR/index.html" ]; then
-  sed -i 's|<head>|<head>\n  <meta name="edition" content="intl">|' "$TMPDIR/index.html"
+  sed -i 's|<head>|<head>\n  <meta name="data_region" content="us">|' "$TMPDIR/index.html"
 fi
 
 mkdir -p "$TMPDIR/models"
@@ -84,9 +84,9 @@ cp "$SRC_DIR/SKILL.md" "$TMPDIR/SKILL_en.md"
 cp "$SRC_DIR/SKILL_cn.md" "$TMPDIR/SKILL.md"
 cat "$SRC_DIR/docs/AI_CONTROL_API_cn.md" >> "$TMPDIR/SKILL.md"
 
-# Inject edition meta for cn
+# Inject data_region meta for CN
 if [ -f "$TMPDIR/index.html" ]; then
-  sed -i 's|<head>|<head>\n  <meta name="edition" content="cn">|' "$TMPDIR/index.html"
+  sed -i 's|<head>|<head>\n  <meta name="data_region" content="cn">|' "$TMPDIR/index.html"
 fi
 
 mkdir -p "$TMPDIR/models"
