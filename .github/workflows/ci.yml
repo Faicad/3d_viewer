@@ -57,7 +57,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y zip
       - run: npm run package
-      - run: sed -i 's|<head>|<head>\n  <meta name="edition" content="intl">|' skills/3d_viewer/index.html
+      - run: sed -i 's|<head>|<head>\n  <meta name="data_region" content="us">|' skills/3d_viewer/index.html
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
